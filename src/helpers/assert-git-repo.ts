@@ -1,7 +1,7 @@
 import { stat } from "fs/promises";
 import { resolve } from "path";
 
-export async function isGitRepo(repoPath: string) {
+export async function assertGitRepo(repoPath: string) {
     try {
         let result = await stat(resolve(repoPath, ".git"));
 
