@@ -1,5 +1,13 @@
 {
-  "dependencies": {
+  "author": {
+    "name": "Kartavya Patel",
+    "email": "82671701+patelka2211@users.noreply.github.com",
+    "url": "https://kpverse.in"
+  },
+  "devDependencies": {
     "@types/node": "^20.14.11"
+  },
+  "dependencies": {
+    "dugite": "^2.7.1"
   }
 }
