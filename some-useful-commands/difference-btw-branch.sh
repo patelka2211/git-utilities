@@ -1,0 +1,1 @@
+# git rev-list --count <BRANCH_ONE>...<BRANCH_TWO>
