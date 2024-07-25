@@ -2,8 +2,39 @@ import { GitProcess } from "dugite";
 import { assertGitRepo } from "./assert-git-repo";
 
 interface Options {
-    howManyParents?: number;
+    /**
+     * Maximum parent commits returned.
+     *
+     * Default value: `50`
+     */
+    maximumParents?: number;
     abbreviatedHash?: boolean;
+}
+
+async function getParent(
+    repoPath: string,
+    currentCommitHash: string,
+    abbreviatedHash: boolean
+) {
+    const { stderr, stdout } = await GitProcess.exec(
+        [
+            "log",
+            "-1",
+            `--format=%${abbreviatedHash ? "p" : "P"}`,
+            currentCommitHash,
+        ],
+        repoPath
+    );
+
+    if (stderr === "") {
+        if (stdout.includes(" ")) {
+            return stdout.replace("\n", "").split(" ");
+        } else {
+            return stdout.replace("\n", "");
+        }
+    } else {
+        throw new Error(stderr);
+    }
 }
 
 export async function getParentCommits(
@@ -15,28 +46,44 @@ export async function getParentCommits(
 
     if (currentCommitHash === undefined) currentCommitHash = "";
     if (options === undefined) options = {};
-    if (options.howManyParents === undefined) options.howManyParents = 50;
+    if (options.maximumParents === undefined) options.maximumParents = 50;
     if (options.abbreviatedHash === undefined) options.abbreviatedHash = true;
 
-    let { stderr, stdout } = await GitProcess.exec(
-        [
-            "log",
-            `-${options.howManyParents}`,
-            `--format=%${options.abbreviatedHash ? "p" : "P"}`,
+    let parentList: Array<string> | undefined = undefined,
+        currentParentCommitHash = await getParent(
+            repoPath,
             currentCommitHash,
-        ],
-        repoPath
-    );
+            options.abbreviatedHash
+        ),
+        counter = 0;
 
-    if (stderr === "") {
-        let result: (string | string[])[] = [];
+    while (
+        !(
+            typeof currentParentCommitHash !== "string" ||
+            counter > options.maximumParents
+        )
+    ) {
+        if (parentList === undefined) {
+            parentList = [currentParentCommitHash];
+        } else {
+            parentList = [...parentList, currentParentCommitHash];
+        }
 
-        stdout.split("\n").forEach((value) => {
-            if (value === "") return;
-            if (value.includes(" ")) result.push(value.split(" "));
-            else result.push(value);
-        });
+        currentParentCommitHash = await getParent(
+            repoPath,
+            currentParentCommitHash,
+            options.abbreviatedHash
+        );
 
-        return result;
-    } else throw new Error(stderr);
+        counter++;
+    }
+
+    if (typeof currentParentCommitHash === "string") {
+        if (counter < options.maximumParents) {
+            parentList?.push(currentParentCommitHash);
+        }
+        return { parentList };
+    } else {
+        return { parentList, splitsInto: currentParentCommitHash };
+    }
 }
