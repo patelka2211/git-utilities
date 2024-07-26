@@ -28,12 +28,18 @@ async function getParent(
 
     if (stderr === "") {
         if (stdout.includes(" ")) {
-            return stdout.replace("\n", "").split(" ");
+            return {
+                type: "SUCCESS" as const,
+                data: stdout.replace("\n", "").split(" "),
+            };
         } else {
-            return stdout.replace("\n", "");
+            return { type: "SUCCESS" as const, data: stdout.replace("\n", "") };
         }
     } else {
-        throw new Error(stderr);
+        return {
+            type: "ERROR" as const,
+            msg: "CAN NOT FIND PARENT COMMITS" as const,
+        };
     }
 }
 
@@ -50,40 +56,35 @@ export async function getParentCommits(
     if (options.abbreviatedHash === undefined) options.abbreviatedHash = true;
 
     let parentList: Array<string> | undefined = undefined,
-        currentParentCommitHash = await getParent(
+        splitsInto: Array<string> | undefined = undefined;
+
+    do {
+        const { type, data, msg } = await getParent(
             repoPath,
             currentCommitHash,
             options.abbreviatedHash
-        ),
-        counter = 0;
-
-    while (
-        !(
-            typeof currentParentCommitHash !== "string" ||
-            counter > options.maximumParents
-        )
-    ) {
-        if (parentList === undefined) {
-            parentList = [currentParentCommitHash];
-        } else {
-            parentList = [...parentList, currentParentCommitHash];
-        }
-
-        currentParentCommitHash = await getParent(
-            repoPath,
-            currentParentCommitHash,
-            options.abbreviatedHash
         );
 
-        counter++;
-    }
-
-    if (typeof currentParentCommitHash === "string") {
-        if (counter < options.maximumParents) {
-            parentList?.push(currentParentCommitHash);
+        if (type === "ERROR") {
+            return {
+                type,
+                msg,
+            };
         }
-        return { parentList };
-    } else {
-        return { parentList, splitsInto: currentParentCommitHash };
-    }
+
+        if (typeof data === "object") {
+            splitsInto = data;
+            break;
+        }
+
+        if (parentList === undefined) {
+            parentList = [data];
+        } else {
+            parentList = [...parentList, data];
+        }
+
+        currentCommitHash = data;
+    } while (!(parentList.length > options.maximumParents));
+
+    return { type: "SUCCESS" as const, data: { parentList, splitsInto } };
 }
