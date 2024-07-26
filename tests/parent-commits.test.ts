@@ -3,17 +3,22 @@ import { localBranches } from "../src/helpers/local-branches";
 import { getParentCommits } from "../src/helpers/parent-commits";
 
 (async () => {
-    let repoPath = resolve("./"),
+    const repoPath = resolve("./"),
         branches = await localBranches(repoPath);
 
     if (branches !== undefined) {
         for (const branch of branches) {
-            let result = await getParentCommits(repoPath, branch.pointsAt);
+            const result = await getParentCommits(repoPath, branch.pointsAt);
 
-            console.log({
-                branch: branch.name,
-                parents: result,
-            });
+            if (result.type === "SUCCESS") {
+                const { parentList, splitsInto } = result.data;
+
+                console.log({
+                    branch: branch.name,
+                    parentList,
+                    splitsInto,
+                });
+            }
         }
     }
 })();
