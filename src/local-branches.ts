@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from "fs/promises";
 import { resolve } from "path";
-import { assertGitRepo } from "./assert-git-repo";
+import { assertGitRepo } from "./helpers/assert-git-repo";
 
 interface Branch {
     name: string;
