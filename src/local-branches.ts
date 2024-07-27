@@ -21,7 +21,8 @@ async function getBranchPointer(
 
 async function collectBranches(
     heads: string,
-    parentPath: string
+    parentPath: string,
+    abbreviatedHash: boolean
 ): Promise<Branch[] | undefined> {
     try {
         const dirItems = await readdir(resolve(heads, parentPath));
@@ -37,7 +38,8 @@ async function collectBranches(
                 if (_stat.isDirectory() === true) {
                     const nestedBranches = await collectBranches(
                         heads,
-                        `${parentPath}${dirItem}/`
+                        `${parentPath}${dirItem}/`,
+                        abbreviatedHash
                     );
 
                     if (nestedBranches !== undefined) {
@@ -59,7 +61,10 @@ async function collectBranches(
                         if (pointsAt !== undefined) {
                             const branch: Branch = {
                                 name: `${parentPath}${dirItem}`,
-                                pointsAt,
+                                pointsAt:
+                                    abbreviatedHash === true
+                                        ? pointsAt.substring(0, 7)
+                                        : pointsAt,
                             };
 
                             if (branches === undefined) {
@@ -81,7 +86,22 @@ async function collectBranches(
     }
 }
 
-export async function localBranches(repoPath: string) {
+interface Options {
+    /**
+     * Default value: `true`
+     */
+    abbreviatedHash?: boolean;
+}
+
+export async function localBranches(repoPath: string, options?: Options) {
     await assertGitRepo(repoPath);
-    return await collectBranches(resolve(repoPath, ".git/refs/heads"), "");
+
+    if (options === undefined) options = {};
+    if (options.abbreviatedHash === undefined) options.abbreviatedHash = true;
+
+    return await collectBranches(
+        resolve(repoPath, ".git/refs/heads"),
+        "",
+        options.abbreviatedHash
+    );
 }
