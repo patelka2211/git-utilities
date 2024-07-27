@@ -83,6 +83,5 @@ async function collectBranches(
 
 export async function localBranches(repoPath: string) {
     await assertGitRepo(repoPath);
-
-    return await collectBranches(resolve(repoPath, "./git/refs/heads"), "");
+    return await collectBranches(resolve(repoPath, ".git/refs/heads"), "");
 }
