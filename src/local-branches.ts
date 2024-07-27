@@ -7,61 +7,82 @@ interface Branch {
     pointsAt: string;
 }
 
-async function getBranchPointer(parentFolder: string, branchName: string) {
-    const pointer = await readFile(resolve(parentFolder, branchName));
-    return pointer.toString().replace("\n", "");
+async function getBranchPointer(
+    parentFolder: string,
+    branchName: string
+): Promise<string | undefined> {
+    try {
+        const pointer = await readFile(resolve(parentFolder, branchName));
+        return pointer.toString().replace("\n", "");
+    } catch (error) {
+        // Error reading content of a file.
+    }
 }
 
-async function collectBranches(heads: string, parentPath: string) {
-    const dirItems = await readdir(resolve(heads, parentPath));
+async function collectBranches(
+    heads: string,
+    parentPath: string
+): Promise<Branch[] | undefined> {
+    try {
+        const dirItems = await readdir(resolve(heads, parentPath));
 
-    let branches: Array<Branch> | undefined;
+        let branches: Array<Branch> | undefined;
 
-    for (let index = 0; index < dirItems.length; index++) {
-        const dirItem = dirItems[index];
+        for (let index = 0; index < dirItems.length; index++) {
+            try {
+                const dirItem = dirItems[index],
+                    _stat = await stat(resolve(heads, parentPath, dirItem));
 
-        const _stat = await stat(resolve(heads, parentPath, dirItem));
+                // For a directory
+                if (_stat.isDirectory() === true) {
+                    const nestedBranches = await collectBranches(
+                        heads,
+                        `${parentPath}${dirItem}/`
+                    );
 
-        if (_stat.isDirectory() === true) {
-            const nestedBranches = await collectBranches(
-                heads,
-                `${parentPath}${dirItem}/`
-            );
-
-            if (nestedBranches !== undefined) {
-                if (branches === undefined) {
-                    branches = [...nestedBranches];
-                } else {
-                    branches = [...branches, ...nestedBranches];
+                    if (nestedBranches !== undefined) {
+                        if (branches === undefined) {
+                            branches = [...nestedBranches];
+                        } else {
+                            branches = [...branches, ...nestedBranches];
+                        }
+                    }
                 }
+                // For a file
+                else if (_stat.isFile() === true) {
+                    if (_stat.size === 41) {
+                        const pointsAt = await getBranchPointer(
+                            resolve(heads, parentPath),
+                            dirItem
+                        );
+
+                        if (pointsAt !== undefined) {
+                            const branch: Branch = {
+                                name: `${parentPath}${dirItem}`,
+                                pointsAt,
+                            };
+
+                            if (branches === undefined) {
+                                branches = [branch];
+                            } else {
+                                branches = [...branches, branch];
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                // Error reading stats of a file or a directory.
             }
         }
-        if (_stat.isFile() === true) {
-            if (_stat.size === 41) {
-                const branch: Branch = {
-                    name: `${parentPath}${dirItem}`,
-                    pointsAt: await getBranchPointer(
-                        resolve(heads, parentPath),
-                        dirItem
-                    ),
-                };
 
-                if (branches === undefined) {
-                    branches = [branch];
-                } else {
-                    branches = [...branches, branch];
-                }
-            }
-        }
+        return branches;
+    } catch (error) {
+        // Error reading content of a directory.
     }
-
-    return branches;
 }
 
 export async function localBranches(repoPath: string) {
     await assertGitRepo(repoPath);
 
-    let heads = resolve(repoPath, "./.git/refs/heads");
-
-    return await collectBranches(heads, "");
+    return await collectBranches(resolve(repoPath, "./git/refs/heads"), "");
 }
