@@ -6,8 +6,18 @@ export async function assertGitRepo(repoPath: string) {
         let result = await stat(resolve(repoPath, ".git"));
 
         if (result.isDirectory() !== true)
-            throw Error(`"${repoPath}" is not a Git repository.`);
+            return {
+                type: "ERROR" as const,
+                msg: "Not a Git repository." as const,
+            };
+
+        return {
+            type: "SUCCESS" as const,
+        };
     } catch {
-        throw Error(`"${repoPath}" is not a Git repository.`);
+        return {
+            type: "ERROR" as const,
+            msg: "Not a Git repository." as const,
+        };
     }
 }
