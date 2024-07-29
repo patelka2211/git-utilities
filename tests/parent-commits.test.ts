@@ -1,6 +1,6 @@
 import { resolve } from "path";
-import { getParentCommits } from "../src/helpers/parent-commits";
 import { localBranches } from "../src/local-branches";
+import { getParentCommits } from "../src/parent-commits";
 
 (async () => {
     const repoPath = resolve("./"),

@@ -1,5 +1,5 @@
 import { GitProcess } from "dugite";
-import { assertGitRepo } from "./assert-git-repo";
+import { assertGitRepo } from "./helpers/assert-git-repo";
 
 interface Options {
     /**
