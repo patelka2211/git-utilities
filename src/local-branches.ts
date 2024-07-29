@@ -94,14 +94,21 @@ interface Options {
 }
 
 export async function localBranches(repoPath: string, options?: Options) {
-    await isGitRepo(repoPath);
+    const { type, msg } = await isGitRepo(repoPath);
+
+    if (type === "ERROR") {
+        return { type, msg };
+    }
 
     if (options === undefined) options = {};
     if (options.abbreviatedHash === undefined) options.abbreviatedHash = true;
 
-    return await collectBranches(
-        resolve(repoPath, ".git/refs/heads"),
-        "",
-        options.abbreviatedHash
-    );
+    return {
+        type: "SUCCESS" as const,
+        data: await collectBranches(
+            resolve(repoPath, ".git/refs/heads"),
+            "",
+            options.abbreviatedHash
+        ),
+    };
 }

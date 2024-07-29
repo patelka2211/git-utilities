@@ -38,7 +38,7 @@ async function getParent(
     } else {
         return {
             type: "ERROR" as const,
-            msg: "CAN NOT FIND PARENT COMMITS" as const,
+            msg: "Can not find parent commit." as const,
         };
     }
 }
@@ -48,7 +48,11 @@ export async function getParentCommits(
     currentCommitHash?: string,
     options?: Options
 ) {
-    await isGitRepo(repoPath);
+    const { type, msg } = await isGitRepo(repoPath);
+
+    if (type === "ERROR") {
+        return { type, msg };
+    }
 
     if (currentCommitHash === undefined) currentCommitHash = "";
     if (options === undefined) options = {};
