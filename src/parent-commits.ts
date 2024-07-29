@@ -1,5 +1,5 @@
 import { GitProcess } from "dugite";
-import { assertGitRepo } from "./helpers/assert-git-repo";
+import { isGitRepo } from "./helpers/is-git-repo";
 
 interface Options {
     /**
@@ -48,7 +48,7 @@ export async function getParentCommits(
     currentCommitHash?: string,
     options?: Options
 ) {
-    await assertGitRepo(repoPath);
+    await isGitRepo(repoPath);
 
     if (currentCommitHash === undefined) currentCommitHash = "";
     if (options === undefined) options = {};

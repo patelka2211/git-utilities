@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from "fs/promises";
 import { resolve } from "path";
-import { assertGitRepo } from "./helpers/assert-git-repo";
+import { isGitRepo } from "./helpers/is-git-repo";
 
 interface Branch {
     name: string;
@@ -94,7 +94,7 @@ interface Options {
 }
 
 export async function localBranches(repoPath: string, options?: Options) {
-    await assertGitRepo(repoPath);
+    await isGitRepo(repoPath);
 
     if (options === undefined) options = {};
     if (options.abbreviatedHash === undefined) options.abbreviatedHash = true;
