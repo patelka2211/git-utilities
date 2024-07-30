@@ -1,9 +1,7 @@
 import { GitProcess } from "dugite";
 import { isGitRepo } from "./helpers/is-git-repo";
 
-export async function getDefaultBranch(
-    repoPath: string
-): Promise<
+export async function getDefaultBranch(repoPath: string): Promise<
     | { type: "ERROR"; msg: "Not a Git repository." }
     | { type: "ERROR"; msg: "Error reading remote branches."; data?: undefined }
     | { type: "SUCCESS"; data: string; msg?: undefined }
@@ -19,12 +17,12 @@ export async function getDefaultBranch(
         return isRepo;
     }
 
-    const { stderr, stdout } = await GitProcess.exec(
+    const { exitCode, stdout } = await GitProcess.exec(
         ["branch", "-r", "--contains=origin/HEAD"],
         repoPath
     );
 
-    if (stderr) {
+    if (exitCode !== 0) {
         return {
             type: "ERROR" as const,
             msg: "Error reading remote branches." as const,
