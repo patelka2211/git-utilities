@@ -11,11 +11,9 @@ export async function getDefaultBranch(repoPath: string): Promise<
           data?: undefined;
       }
 > {
-    const isRepo = await isGitRepo(repoPath);
+    const isItRepo = await isGitRepo(repoPath);
 
-    if (isRepo.type === "ERROR") {
-        return isRepo;
-    }
+    if (isItRepo.type === "ERROR") return isItRepo;
 
     const { exitCode, stdout } = await GitProcess.exec(
         ["branch", "-r", "--contains=origin/HEAD"],

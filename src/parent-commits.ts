@@ -48,11 +48,9 @@ export async function getParentCommits(
     currentCommitHash?: string,
     options?: Options
 ) {
-    const { type, msg } = await isGitRepo(repoPath);
+    const isItRepo = await isGitRepo(repoPath);
 
-    if (type === "ERROR") {
-        return { type, msg };
-    }
+    if (isItRepo.type === "ERROR") return isItRepo;
 
     if (currentCommitHash === undefined) currentCommitHash = "";
     if (options === undefined) options = {};
