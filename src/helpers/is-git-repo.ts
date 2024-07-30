@@ -1,23 +1,21 @@
 import { stat } from "fs/promises";
 import { resolve } from "path";
+import { affirmativeResponse, negativeResponse } from "./responses";
 
-export async function isGitRepo(repoPath: string) {
+export async function isGitRepo(
+    repoPath: string
+): Promise<
+    | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
+    | { type: "SUCCESS"; data: null; msg?: undefined }
+> {
     try {
         let result = await stat(resolve(repoPath, ".git"));
 
         if (result.isDirectory() !== true)
-            return {
-                type: "ERROR" as const,
-                msg: "Not a Git repository." as const,
-            };
+            return negativeResponse("Not a Git repository." as const);
 
-        return {
-            type: "SUCCESS" as const,
-        };
+        return affirmativeResponse(null);
     } catch {
-        return {
-            type: "ERROR" as const,
-            msg: "Not a Git repository." as const,
-        };
+        return negativeResponse("Not a Git repository." as const);
     }
 }

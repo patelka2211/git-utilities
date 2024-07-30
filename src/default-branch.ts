@@ -1,8 +1,11 @@
 import { GitProcess } from "dugite";
 import { isGitRepo } from "./helpers/is-git-repo";
+import { affirmativeResponse, negativeResponse } from "./helpers/responses";
 
-export async function getDefaultBranch(repoPath: string): Promise<
-    | { type: "ERROR"; msg: "Not a Git repository." }
+export async function getDefaultBranch(
+    repoPath: string
+): Promise<
+    | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
     | { type: "ERROR"; msg: "Error reading remote branches."; data?: undefined }
     | { type: "SUCCESS"; data: string; msg?: undefined }
     | {
@@ -21,25 +24,18 @@ export async function getDefaultBranch(repoPath: string): Promise<
     );
 
     if (exitCode !== 0) {
-        return {
-            type: "ERROR" as const,
-            msg: "Error reading remote branches." as const,
-        };
+        return negativeResponse("Error reading remote branches." as const);
     }
 
     try {
         for (let branch of stdout.split("\n")) {
             branch = branch.trim();
             if (branch.startsWith("origin/HEAD"))
-                return {
-                    type: "SUCCESS" as const,
-                    data: branch.split("-> ")[1].replace("origin/", ""),
-                };
+                return affirmativeResponse(
+                    branch.split("-> ")[1].replace("origin/", "")
+                );
         }
     } catch (error) {}
 
-    return {
-        type: "ERROR" as const,
-        msg: 'No "origin/HEAD" remote branch found.' as const,
-    };
+    return negativeResponse('No "origin/HEAD" remote branch found.' as const);
 }
