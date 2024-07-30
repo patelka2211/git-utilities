@@ -1,5 +1,6 @@
 import { GitProcess } from "dugite";
 import { isGitRepo } from "./helpers/is-git-repo";
+import { affirmativeResponse, negativeResponse } from "./helpers/responses";
 
 interface Options {
     /**
@@ -15,7 +16,11 @@ async function getParent(
     repoPath: string,
     currentCommitHash: string,
     abbreviatedHash: boolean
-) {
+): Promise<
+    | { type: "SUCCESS"; data: string[]; msg?: undefined }
+    | { type: "SUCCESS"; data: string; msg?: undefined }
+    | { type: "ERROR"; msg: "Can not find parent commit."; data?: undefined }
+> {
     const { stderr, stdout } = await GitProcess.exec(
         [
             "log",
@@ -28,18 +33,12 @@ async function getParent(
 
     if (stderr === "") {
         if (stdout.includes(" ")) {
-            return {
-                type: "SUCCESS" as const,
-                data: stdout.replace("\n", "").split(" "),
-            };
+            return affirmativeResponse(stdout.replace("\n", "").split(" "));
         } else {
-            return { type: "SUCCESS" as const, data: stdout.replace("\n", "") };
+            return affirmativeResponse(stdout.replace("\n", ""));
         }
     } else {
-        return {
-            type: "ERROR" as const,
-            msg: "Can not find parent commit." as const,
-        };
+        return negativeResponse("Can not find parent commit." as const);
     }
 }
 
@@ -47,12 +46,21 @@ export async function getParentCommits(
     repoPath: string,
     currentCommitHash?: string,
     options?: Options
-) {
-    const { type, msg } = await isGitRepo(repoPath);
+): Promise<
+    | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
+    | {
+          type: "SUCCESS";
+          data: {
+              parentList: string[] | undefined;
+              splitsInto: string[] | undefined;
+          };
+          msg?: undefined;
+      }
+    | { type: "ERROR"; msg: "Can not find parent commit." }
+> {
+    const isItRepo = await isGitRepo(repoPath);
 
-    if (type === "ERROR") {
-        return { type, msg };
-    }
+    if (isItRepo.type === "ERROR") return isItRepo;
 
     if (currentCommitHash === undefined) currentCommitHash = "";
     if (options === undefined) options = {};
@@ -90,5 +98,5 @@ export async function getParentCommits(
         currentCommitHash = data;
     } while (!(parentList.length > options.maximumParents));
 
-    return { type: "SUCCESS" as const, data: { parentList, splitsInto } };
+    return affirmativeResponse({ parentList, splitsInto });
 }

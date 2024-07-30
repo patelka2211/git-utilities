@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from "fs/promises";
 import { resolve } from "path";
 import { isGitRepo } from "./helpers/is-git-repo";
+import { affirmativeResponse } from "./helpers/responses";
 
 interface Branch {
     name: string;
@@ -93,22 +94,25 @@ interface Options {
     abbreviatedHash?: boolean;
 }
 
-export async function localBranches(repoPath: string, options?: Options) {
-    const { type, msg } = await isGitRepo(repoPath);
+export async function localBranches(
+    repoPath: string,
+    options?: Options
+): Promise<
+    | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
+    | { type: "SUCCESS"; data: Branch[] | undefined; msg?: undefined }
+> {
+    const isItRepo = await isGitRepo(repoPath);
 
-    if (type === "ERROR") {
-        return { type, msg };
-    }
+    if (isItRepo.type === "ERROR") return isItRepo;
 
     if (options === undefined) options = {};
     if (options.abbreviatedHash === undefined) options.abbreviatedHash = true;
 
-    return {
-        type: "SUCCESS" as const,
-        data: await collectBranches(
+    return affirmativeResponse(
+        await collectBranches(
             resolve(repoPath, ".git/refs/heads"),
             "",
             options.abbreviatedHash
-        ),
-    };
+        )
+    );
 }

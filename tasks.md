@@ -1,1 +1,4 @@
 -   [x] finding default branch
+-   [ ] branch deletion functionality
+-   [x] find upstream branch of a local branch
+-   [ ] compare two branches (get ahead/behind count)
