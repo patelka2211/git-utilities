@@ -12,11 +12,10 @@ export async function compareBranches(
     | {
           type: "SUCCESS";
           data: {
-              [x: string]: {
-                  ahead: number;
-                  behind: number;
-                  comparedTo: string;
-              };
+              branch: string;
+              ahead: number;
+              behind: number;
+              comparedTo: string;
           };
           msg?: undefined;
       }
@@ -46,8 +45,10 @@ export async function compareBranches(
             .map((value) => +value);
 
         return affirmativeResponse({
-            [branch1]: { ahead: left, behind: right, comparedTo: branch2 },
-            [branch2]: { ahead: right, behind: left, comparedTo: branch1 },
+            branch: branch1,
+            ahead: left,
+            behind: right,
+            comparedTo: branch2,
         });
     } catch (error) {}
 
