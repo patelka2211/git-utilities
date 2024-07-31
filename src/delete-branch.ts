@@ -46,7 +46,7 @@ async function _deleteBranch(
     branch: string,
     forceDelete?: boolean
 ): Promise<
-    | { type: "SUCCESS"; data: string; msg?: undefined }
+    | { type: "SUCCESS"; data: string[]; msg?: undefined }
     | { type: "ERROR"; msg: string[]; data?: undefined }
 > {
     const { exitCode, stderr, stdout } = await GitProcess.exec(
@@ -55,7 +55,9 @@ async function _deleteBranch(
     );
 
     if (exitCode === 0) {
-        return affirmativeResponse(stdout);
+        return affirmativeResponse(
+            stdout.split("\n").filter((value) => (value !== "" ? true : false))
+        );
     } else {
         return negativeResponse(
             stderr.split("\n").filter((value) => (value !== "" ? true : false))
@@ -69,7 +71,7 @@ export async function deleteBranch(
     options?: Options
 ): Promise<
     | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
-    | { type: "SUCCESS"; data: string; msg?: undefined }
+    | { type: "SUCCESS"; data: string[]; msg?: undefined }
     | { type: "ERROR"; msg: string[]; data?: undefined }
     | {
           type: "ERROR";
