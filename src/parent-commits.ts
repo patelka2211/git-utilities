@@ -17,11 +17,11 @@ async function getParent(
     currentCommitHash: string,
     abbreviatedHash: boolean
 ): Promise<
+    | { type: "ERROR"; msg: "Can not find parent commit."; data?: undefined }
     | { type: "SUCCESS"; data: string[]; msg?: undefined }
     | { type: "SUCCESS"; data: string; msg?: undefined }
-    | { type: "ERROR"; msg: "Can not find parent commit."; data?: undefined }
 > {
-    const { stderr, stdout } = await GitProcess.exec(
+    const { exitCode, stdout } = await GitProcess.exec(
         [
             "log",
             "-1",
@@ -31,15 +31,12 @@ async function getParent(
         repoPath
     );
 
-    if (stderr === "") {
-        if (stdout.includes(" ")) {
-            return affirmativeResponse(stdout.replace("\n", "").split(" "));
-        } else {
-            return affirmativeResponse(stdout.replace("\n", ""));
-        }
-    } else {
+    if (exitCode !== 0)
         return negativeResponse("Can not find parent commit." as const);
-    }
+
+    if (stdout.includes(" "))
+        return affirmativeResponse(stdout.replace("\n", "").split(" "));
+    else return affirmativeResponse(stdout.replace("\n", ""));
 }
 
 export async function getParentCommits(
