@@ -15,36 +15,51 @@ async function compareWithRemoteBranch(
     repoPath: string,
     branch1: string,
     branch2: string
-) {
+): Promise<
+    | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
+    | { type: "ERROR"; msg: "Not able to compare branches."; data?: undefined }
+    | {
+          type: "ERROR";
+          msg: "Error occurred while parsing data for comparing branches.";
+          data?: undefined;
+      }
+    | { type: "SUCCESS"; data: null; msg?: undefined }
+    | { type: "ERROR"; msg: { ahead: number }; data?: undefined }
+> {
     const branchComparison = await compareBranches(repoPath, branch1, branch2);
 
     if (branchComparison.type === "SUCCESS") {
-        if (branchComparison.data.ahead === 0)
-            return affirmativeResponse(
-                // "Branch can be deleted." as const
-                null
-            );
-        else
+        if (branchComparison.data.ahead === 0) {
+            return affirmativeResponse(null);
+        } else {
             return negativeResponse({
                 ahead: branchComparison.data.ahead,
             });
-    } else return negativeResponse("Branch can not be deleted." as const);
+        }
+    } else {
+        return branchComparison;
+    }
 }
 
 async function _deleteBranch(
     repoPath: string,
     branch: string,
     forceDelete?: boolean
-) {
-    const { exitCode } = await GitProcess.exec(
+): Promise<
+    | { type: "SUCCESS"; data: string; msg?: undefined }
+    | { type: "ERROR"; msg: string[]; data?: undefined }
+> {
+    const { exitCode, stderr, stdout } = await GitProcess.exec(
         ["branch", forceDelete === true ? "-D" : "-d", branch],
         repoPath
     );
 
     if (exitCode === 0) {
-        return affirmativeResponse("Branch deleted successfully." as const);
+        return affirmativeResponse(stdout);
     } else {
-        return negativeResponse("Error while deleting the branch." as const);
+        return negativeResponse(
+            stderr.split("\n").filter((value) => (value !== "" ? true : false))
+        );
     }
 }
 
@@ -53,18 +68,22 @@ export async function deleteBranch(
     branch: string,
     options?: Options
 ): Promise<
-    | { type: "SUCCESS"; data: "Branch deleted successfully."; msg?: undefined }
+    | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
+    | { type: "SUCCESS"; data: string; msg?: undefined }
+    | { type: "ERROR"; msg: string[]; data?: undefined }
     | {
           type: "ERROR";
-          msg: "Error while deleting the branch.";
+          msg: `Branch ${string} might be ahead of it's remote branch.`;
           data?: undefined;
       }
-    | { type: "ERROR"; msg: "Not a Git repository."; data?: undefined }
     | {
           type: "ERROR";
-          msg:
-              | "Branch can not be deleted."
-              | `Branch "${string}" is ${number} commit(s) ahead of "${string}".`;
+          msg: `Branch "${string}" is ${number} commit(s) ahead of "${string}".`;
+          data?: undefined;
+      }
+    | {
+          type: "ERROR";
+          msg: `Branch "${string}" might not be fully merged with the default branch.`;
           data?: undefined;
       }
 > {
@@ -93,11 +112,24 @@ export async function deleteBranch(
         if (compareWithUpstreamBranch.type === "SUCCESS") {
             return _deleteBranch(repoPath, branch);
         } else {
-            return negativeResponse(
-                typeof compareWithUpstreamBranch.msg === "string"
-                    ? compareWithUpstreamBranch.msg
-                    : (`Branch "${branch}" is ${compareWithUpstreamBranch.msg.ahead} commit(s) ahead of "${upstreamBranch.data.origin}".` as const)
-            );
+            if (
+                compareWithUpstreamBranch.msg ===
+                    "Not able to compare branches." ||
+                compareWithUpstreamBranch.msg ===
+                    "Error occurred while parsing data for comparing branches."
+            ) {
+                return negativeResponse(
+                    `Branch ${branch} might be ahead of it's remote branch.` as const
+                );
+            } else if (
+                compareWithUpstreamBranch.msg === "Not a Git repository."
+            ) {
+                return compareWithUpstreamBranch;
+            } else {
+                return negativeResponse(
+                    `Branch "${branch}" is ${compareWithUpstreamBranch.msg.ahead} commit(s) ahead of "${upstreamBranch.data.origin}".` as const
+                );
+            }
         }
     }
 
@@ -113,10 +145,20 @@ export async function deleteBranch(
     if (compareWithOriginHEAD.type === "SUCCESS") {
         return _deleteBranch(repoPath, branch);
     } else {
-        return negativeResponse(
-            typeof compareWithOriginHEAD.msg === "string"
-                ? compareWithOriginHEAD.msg
-                : (`Branch "${branch}" is ${compareWithOriginHEAD.msg.ahead} commit(s) ahead of "origin/HEAD".` as const)
-        );
+        if (
+            compareWithOriginHEAD.msg === "Not able to compare branches." ||
+            compareWithOriginHEAD.msg ===
+                "Error occurred while parsing data for comparing branches."
+        ) {
+            return negativeResponse(
+                `Branch "${branch}" might not be fully merged with the default branch.` as const
+            );
+        } else if (compareWithOriginHEAD.msg === "Not a Git repository.") {
+            return compareWithOriginHEAD;
+        } else {
+            return negativeResponse(
+                `Branch "${branch}" is ${compareWithOriginHEAD.msg.ahead} commit(s) ahead of "origin/HEAD".` as const
+            );
+        }
     }
 }
